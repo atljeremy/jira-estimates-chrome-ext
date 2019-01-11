@@ -11,30 +11,21 @@ var sumTotal = () => {
 }
 
 var sumCols = () => {
-  var swimLanes = Array.from(document.querySelectorAll("li[data-column-id]"))
-  swimLanes = swimLanes.reduce((acc, cur) => {
-    var estimates = Array.from(cur.querySelectorAll("aui-badge[class=ghx-estimate]"))
-    var sum = sumElements(estimates)
-    var currentColSum = acc[cur.dataset.columnId] || 0
-    var key = (containsUnestimated(estimates)) ? `${cur.dataset.columnId}?uns` : cur.dataset.columnId
-    acc[key] = currentColSum + sum
-    return acc
-  }, {})
-  for (laneId in swimLanes) {
-    var cleanLaneId = laneId.replace("?uns", "")
-    var id = `${cleanLaneId}-sum-badge`
+  var swimLanesObjs = collectSwimlaneEstimates()
+  for (laneId in swimLanesObjs) {
+    var id = `${laneId}-sum-badge`
     var sumBadge = document.getElementById(id)
     if (!sumBadge) {
       var sumBadge = document.createElement('aui-badge')
       sumBadge.id = id
-      document.querySelector(`li[data-id="${cleanLaneId}"] h2`)
+      document.querySelector(`li[data-id="${laneId}"] h2`)
               .parentElement
               .appendChild(sumBadge)
     }
-    if (laneId.includes("?uns")) {
+    if (swimLanesObjs[laneId]['containsUnestimated']) {
       applyBgColor(sumBadge)
     }
-    sumBadge.innerHTML = swimLanes[cleanLaneId]
+    sumBadge.innerHTML = swimLanesObjs[laneId]['total']
   }
 }
 
@@ -49,6 +40,23 @@ var containsUnestimated = (elems) => {
 var unestimated = (elems) => {
   return elems.filter(e => e.innerHTML == '-')
 }
+
+var collectSwimlaneEstimates = () => Array.from(document.querySelectorAll("li[data-column-id]")).reduce((acc, cur) => {
+    var estimates = Array.from(cur.querySelectorAll("aui-badge[class=ghx-estimate]"))
+    var sum = sumElements(estimates)
+    var colId = cur.dataset.columnId
+    var currentColSum = 0
+    var containsUns = containsUnestimated(estimates)
+    if (acc[colId]) {
+      currentColSum = acc[colId]['total']
+      containsUns = containsUns || acc[colId]['containsUnestimated']
+    }
+    acc[colId] = {
+      total: currentColSum + sum,
+      containsUnestimated: containsUns
+    }
+    return acc
+  }, {})
 
 var collectEstimates = () => {
   var estimates = document.querySelectorAll("aui-badge[class=ghx-estimate]") // Sprint Board
